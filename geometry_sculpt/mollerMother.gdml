@@ -2,58 +2,203 @@
 <gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="schema/gdml.xsd">
 
 <define>
-     <position name="targetCenter" x="0" y="0" z="0"/>
-     <position name="upstreamCenter" x="0" y="0" z="7000."/>
-     <position name="hybridCenter" x="0" y="0" z="13366.57"/>
-     <position name="detectorCenter" x="0" y="0" z="28500."/>
-     <rotation name="identity"/>
+
+  <!-- World Volume -->
+  <quantity name="mother_width"  value="100.0" unit="m"/>
+  <quantity name="mother_height" value="100.0" unit="m"/>
+  <quantity name="mother_length" value="100.0" unit="m"/>
+
+  <!-- Target in relation to hall center -->
+  <quantity name="target_center_height_above_floor" value="0.0*3060.7" unit="mm"/>
+  <quantity name="target_center_position_along_beam" value="-6094.67" unit="mm"/>
+
+  <!-- Hall side wall -->
+  <quantity name="hall_radius" value="2651.7"  unit="cm"/>
+  <quantity name="wall_width"  value="2000.0"  unit="cm"/> 
+  <quantity name="wall_height" value="720."    unit="cm"/>
+  <quantity name="wall_thick"  value="154.776" unit="cm"/>
+
+  <!-- Hall cylindrical wall -->
+  <quantity name="cylwall_height" value="1777.0" unit="cm"/>
+  <quantity name="cylwall_radius" value="2546."  unit="cm"/>
+  <quantity name="cylwall_thick"  value="148.7"  unit="cm"/> 
+  <quantity name="cylwall_bottom" value="-447."  unit="cm"/>  
+  <quantity name="cylwall_center" value="cylwall_height/2+cylwall_bottom"/>
+
+  <!-- Hall top wall -->
+  <quantity name="topwall_radius_out" value="5472.78" unit="cm"/>
+  <quantity name="topwall_radius_in"  value="5402.78" unit="cm"/>
+  <quantity name="topwall_center" value="-3435.26" unit="cm"/> 
+  <quantity name="topwall_trans" value="topwall_radius_out-(-topwall_center+cylwall_bottom+cylwall_height)"/> 
+
+  <!-- Dump -->
+  <quantity name="dump_width" value="600.0" unit="cm"/>
+  <quantity name="dump_height" value="wall_height"/>
+  <quantity name="dump_length" value="600." unit="cm"/> 
+  <quantity name="dump_center" value="cylwall_radius+dump_length/2+cylwall_thick"/>
+  <!-- Dump hole -->
+  <quantity name="dump_hole_length" value="dump_length"/>
+  <quantity name="dump_hole_width"  value="212.816" unit="cm"/>
+  <quantity name="dump_hole_height" value="299.876" unit="cm"/>
+  <quantity name="dump_hole_z_center" value="dump_center-1.001*(dump_length-dump_hole_length)/2"/>
+  <quantity name="dump_hole_y_center" value="-43.531" unit="cm"/>
+  <!-- Dump stainless steel enclosure -->
+  <quantity name="dump_ss_enc_thick" value="11.46" unit="cm"/>
+  <quantity name="dump_ss_enc_center" value="dump_center-dump_length/2-wall_thick+5."/>
+  <quantity name="dump_ss_enc_cylcenter" value="dump_center-dump_length/2-cylwall_thick+5."/>
+  <quantity name="dump_ss_enc_hole_radius" value="46.038" unit="cm"/>
+
+  <!-- Positions of walls, dump -->
+  <position name="cylwall_position"     x="0" y="-target_center_height_above_floor+cylwall_center" z="-target_center_position_along_beam"/>
+  <position name="topwall_position"     x="0" y="-target_center_height_above_floor+topwall_center" z="-target_center_position_along_beam"/>
+  <position name="dump_position"        x="0" y="-target_center_height_above_floor+dump_center"    z="-target_center_position_along_beam+dump_center"/>
+  <position name="dump_ss_enc_position" x="0" y="-target_center_height_above_floor+dump_ss_enc_center" z="-target_center_position_along_beam+dump_ss_enc_cylcenter"/>
+
+  <!-- Positions of detectors -->
+  <position name="targetCenter"   x="0" y="0" z="0"        unit="mm"/>
+  <position name="upstreamCenter" x="0" y="0" z="7000."    unit="mm"/>
+  <position name="hybridCenter"   x="0" y="0" z="13366.57" unit="mm"/>
+  <position name="detectorCenter" x="0" y="0" z="28500."   unit="mm"/>
 </define>
 
 <materials>
-     <material Z="1" name="Vacuum" state="gas">
-       <T unit="K" value="2.73"/>
-       <P unit="pascal" value="3e-18"/>
-       <D unit="g/cm3" value="1e-25"/>
-       <atom unit="g/mole" value="1.01"/>
-     </material>
 </materials>
 
 <solids>
-     <box lunit="mm" name="boxMother" x="4000" y="4000" z="80000"/>
+  <!-- Mother Volume -->
+  <box name="boxMother" x="mother_width" y="mother_height" z="mother_length"/>
+
+  <!-- Hall -->
+  <tube name="cylwall_out" aunit="deg" startphi="0" deltaphi="360" rmin="0.0" rmax="cylwall_radius+cylwall_thick" z="cylwall_height" />
+  <tube name="cylwall_in"  aunit="deg" startphi="0" deltaphi="360" rmin="0.0" rmax="cylwall_radius"               z="cylwall_height-cylwall_thick" />
+  <subtraction name ="cylwall_full">
+      <first ref="cylwall_out"/>
+      <second ref="cylwall_in"/>
+      <position name="cylwall_full_position" x="0" y="0" z="cylwall_thick/2"/>
+  </subtraction>
+
+  <!-- Dump hole in the wall -->
+  <box name="wall_cylhole" x="dump_hole_width" y="dump_hole_height" z="3.0*cylwall_thick"/>
+  <subtraction name ="cylwall_hole">
+      <first ref="cylwall_full"/>
+      <second ref="wall_cylhole"/>
+      <position name="cylwall_hole_position" x="0" y="-cylwall_radius-cylwall_thick/2.0" z="+dump_hole_y_center-cylwall_center"/>
+      <rotation name="cylwall_cylhole_rotation" x="90" y="0" z="0" unit="deg"/>
+  </subtraction>
+
+  <!-- Hall top wall -->
+  <sphere name="hall_top_shell" aunit="deg" startphi="0" deltaphi="360" starttheta="0" deltatheta="180" rmin="topwall_radius_in" rmax="topwall_radius_out"/>
+  <tube   name="hall_top_sub"   aunit="deg" startphi="0" deltaphi="360" rmin="0.0" rmax="1.001*topwall_radius_out" z="2*topwall_radius_out" />
+  <subtraction name ="topwall_solid">
+      <first ref="hall_top_shell"/>
+      <second ref="hall_top_sub"/>
+      <position name="topwall_shift" x="0" y="0" z="-topwall_trans"/>
+  </subtraction>
+
+  <!-- Dump -->
+  <box name="dump_0_solid" x="dump_width" y="dump_height" z="dump_length"/>
+  <box name="dump_hole" x="dump_hole_width" y="dump_hole_height" z="1.2*dump_hole_length"/>
+  <subtraction name ="dump_solid">
+      <first ref="dump_0_solid"/>
+      <second ref="dump_hole"/>
+      <position name="dump_hole_shift" x="0" y="dump_hole_y_center" z="dump_hole_z_center - dump_center"/>
+  </subtraction>
+
+  <!-- Dump enclosure -->
+  <box  name="dump_ss_0_enc" x="dump_hole_width" y="dump_hole_height" z="dump_ss_enc_thick"/>
+  <cone name="dump_ss_enc_hole" aunit="deg" startphi="0" deltaphi="360" rmin1="0.0" rmax1="dump_ss_enc_hole_radius" rmin2="0.0" rmax2="dump_ss_enc_hole_radius" z="1.001*dump_ss_enc_thick"/>
+  <subtraction name ="dump_ss_enc_solid">
+      <first ref="dump_ss_0_enc"/>
+      <second ref="dump_ss_enc_hole"/>
+      <position name="dump_ss_enc_hole_shift" x="0" y="-dump_hole_y_center" z="0"/>
+  </subtraction>
+
 </solids>
 
-  <structure>
+<structure>
+  <!-- Cylindrical wall and floor -->
+  <volume name="cylwall_logic">
+    <materialref ref="G4_CONCRETE"/>
+    <solidref ref="cylwall_hole"/>
+    <auxiliary auxtype="SensDet" auxvalue="5001"/>
+  </volume>
 
-    <volume name="logicMother">
-      <materialref ref="Vacuum"/>
-      <solidref ref="boxMother"/>
+  <!-- Top wall -->
+  <volume name="topwall_logic">
+    <materialref ref="G4_CONCRETE"/>
+    <solidref ref="topwall_solid"/>
+    <auxiliary auxtype="SensDet" auxvalue="5002"/>
+  </volume>
 
-      <physvol>
+  <!-- Dump -->
+  <volume name="dump_logic">
+    <materialref ref="G4_CONCRETE"/>
+    <solidref ref="dump_solid"/>
+  </volume>
+
+  <!-- Dump enclosure -->
+  <volume name="dump_ss_enc_logic">
+    <materialref ref="G4_STAINLESS-STEEL"/>
+    <solidref ref="dump_ss_enc_solid"/>
+  </volume>
+
+  <!-- Mother volume -->
+  <volume name="logicMother">
+    <materialref ref="G4_Galactic"/>
+    <solidref ref="boxMother"/>
+
+    <!-- Cylindrical wall and floor -->
+    <physvol name="cylwall">
+      <volumeref ref="cylwall_logic"/>
+      <positionref ref="cylwall_position"/>
+      <rotation name="cylwall_rotation" x="90" y="0" z="0" unit="deg"/>
+    </physvol>
+
+    <!-- Top wall -->
+    <physvol name="topwall">
+      <volumeref ref="topwall_logic"/>
+      <positionref ref="topwall_position"/>
+      <rotation name="topwall_rotation" x="90" y="0" z="0" unit="deg"/>
+    </physvol>
+
+    <!-- Dump -->
+    <physvol name="dump">
+      <volumeref ref="dump_logic"/>
+      <positionref ref="dump_position"/>
+    </physvol>
+
+    <!-- Dump enclosure -->
+    <physvol name="dump_ss_enc">
+      <volumeref ref="dump_ss_enc_logic"/>
+      <positionref ref="dump_ss_enc_position"/>
+    </physvol>
+
+    <physvol>
       <file name="geometry_sculpt/targetDaughter.gdml"/>
       <positionref ref="targetCenter"/>
-      <rotationref ref="identity"/>
-      </physvol>
-      <physvol>
+    </physvol>
+      
+    <physvol>
       <file name="geometry_sculpt/detectorDaughter.gdml"/>
       <positionref ref="detectorCenter"/>
-      <rotationref ref="identity"/>
-      </physvol>
-      <physvol>
+    </physvol>
+      
+    <physvol>
       <file name="geometry_sculpt/upstreamDaughter.gdml"/>
       <positionref ref="upstreamCenter"/>
-      <rotationref ref="identity"/>
-      </physvol>
-      <physvol>
+    </physvol>
+      
+    <physvol>
       <file name="geometry_sculpt/hybridDaughter.gdml"/>
       <positionref ref="hybridCenter"/>
-      <rotationref ref="identity"/>
-      </physvol> 
+    </physvol> 
 
-    </volume>
-  </structure>
+  </volume>
 
-  <setup name="Default" version="1.0">
-    <world ref="logicMother"/>
-  </setup>
+</structure>
+
+<setup name="Default" version="1.0">
+  <world ref="logicMother"/>
+</setup>
 
 </gdml>
